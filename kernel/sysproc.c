@@ -7,6 +7,12 @@
 #include "proc.h"
 
 uint64
+sys_getppid(void) {
+    struct proc *p = myproc(); 
+    return p->parent->pid; 
+}
+
+uint64
 sys_exit(void)
 {
   int n;
