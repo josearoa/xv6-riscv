@@ -111,6 +111,10 @@ allocproc(void)
 {
   struct proc *p;
 
+  acquire(&tickslock);
+  p->arrival_time = ticks;
+  release(&tickslock);
+
   for(p = proc; p < &proc[NPROC]; p++) {
     acquire(&p->lock);
     if(p->state == UNUSED) {
