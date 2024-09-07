@@ -105,3 +105,6 @@ struct proc {
   struct inode *cwd;           // Current directory
   char name[16];               // Process name (debugging)
 };
+
+// Agregamos el proceso de getancestor()
+int getancestor(uint64);

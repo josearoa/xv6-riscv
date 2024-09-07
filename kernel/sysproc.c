@@ -97,3 +97,41 @@ sys_uptime(void)
   release(&tickslock);
   return xticks;
 }
+
+uint64
+sys_getancestor(void) {
+    int n = 0;
+    // Obtiene el valor del argumento 'n' desde la llamada al sistema.
+    argint(0, &n);  
+
+    // Obtiene el proceso actual (el proceso que hace la llamada al sistema).
+    struct proc *p = myproc();
+    // Si no hay un proceso actual, retorna -1 indicando un error.
+    if (p == 0) {
+        return -1;  
+    }
+
+    // Verifica el valor de 'n' para determinar qué ancestro se solicita.
+    switch(n) {
+        case 0:
+            // Si n es 0, devuelve el ID del proceso actual.
+            return p->pid;  
+        case 1:
+            // Si n es 1, intenta devolver el ID del proceso padre.
+            if (p->parent)
+                return p->parent->pid;  
+            else
+                // Si no hay padre, retorna -1 indicando que no se encontró el ancestro.
+                return -1;  
+        case 2:
+            // Si n es 2, intenta devolver el ID del proceso abuelo.
+            if (p->parent && p->parent->parent)
+                return p->parent->parent->pid;  
+            else
+                // Si no hay abuelo, retorna -1.
+                return -1;  
+        default:
+            // Para cualquier otro valor de n que no esté cubierto, retorna -1.
+            return -1;  
+    }
+}
