@@ -125,6 +125,9 @@ found:
   p->pid = allocpid();
   p->state = USED;
 
+  p->priority = 0; // Prioridad inicial (0 = mayor prioridad)
+  p->boost = 1; // Boost inicial (comienza con 1)
+
   // Allocate a trapframe page.
   if((p->trapframe = (struct trapframe *)kalloc()) == 0){
     freeproc(p);
@@ -457,28 +460,43 @@ scheduler(void)
     int found = 0;
     for(p = proc; p < &proc[NPROC]; p++) {
       acquire(&p->lock);
+
       if(p->state == RUNNABLE) {
-        // Switch to chosen process.  It is the process's job
-        // to release its lock and then reacquire it
-        // before jumping back to us.
+        // Incrementar la prioridad del proceso según su boost
+        p->priority += p->boost;
+
+        // Si la prioridad alcanza 9, cambiar el boost a -1
+        if(p->priority >= 9) {
+          p->priority = 9;   // Mantener la prioridad en 9 como máximo
+          p->boost = -1;     // Cambiar el boost a -1
+        }
+
+        // Si la prioridad llega a 0, cambiar el boost a 1
+        if(p->priority <= 0) {
+          p->priority = 0;   // Mantener la prioridad en 0 como mínimo
+          p->boost = 1;      // Cambiar el boost a 1
+        }
+
+        // Ejecutar el proceso
         p->state = RUNNING;
         c->proc = p;
         swtch(&c->context, &p->context);
 
-        // Process is done running for now.
-        // It should have changed its p->state before coming back.
+        // El proceso ha terminado de ejecutarse por ahora
         c->proc = 0;
         found = 1;
       }
       release(&p->lock);
     }
+    
     if(found == 0) {
-      // nothing to run; stop running on this core until an interrupt.
+      // No hay nada que ejecutar; detener este core hasta una interrupción.
       intr_on();
       asm volatile("wfi");
     }
   }
 }
+
 
 // Switch to scheduler.  Must hold only p->lock
 // and have changed proc->state. Saves and restores
