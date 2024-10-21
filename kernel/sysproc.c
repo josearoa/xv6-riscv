@@ -91,3 +91,32 @@ sys_uptime(void)
   release(&tickslock);
   return xticks;
 }
+
+extern int set_priority(int pid, int priority);
+extern int set_boost(int pid, int boost);
+
+// sys_setpriority: Establece la prioridad de un proceso dado su PID.
+uint64
+sys_setpriority(void) {
+    int pid, priority;
+
+    // Extrae PID y prioridad de los argumentos.
+    argint(0, &pid);
+    argint(1, &priority);
+
+    // Llama a la función interna para establecer la prioridad.
+    return (uint64)set_priority(pid, priority);
+}
+
+// sys_setboost: Establece el boost de un proceso dado su PID.
+uint64
+sys_setboost(void) {
+    int pid, boost;
+
+    // Extrae PID y boost de los argumentos.
+    argint(0, &pid);
+    argint(1, &boost);
+
+    // Llama a la función interna para establecer el boost.
+    return (uint64)set_boost(pid, boost);
+}

@@ -458,39 +458,42 @@ scheduler(void)
     intr_on();
 
     int found = 0;
+   
+    for(p = proc; p < &proc[NPROC]; p++){
+      acquire(&p->lock);
+      if(p->state == RUNNABLE){
+        p->priority += p->boost;
+        if(p->priority >= 9){
+          p->boost =-1;
+          p->priority = 9;
+        } else if(p->priority <= 0){
+          p->boost = 1;
+          p->priority = 0;
+        }
+      }
+      release(&p->lock);
+    }
+
+
     for(p = proc; p < &proc[NPROC]; p++) {
       acquire(&p->lock);
-
       if(p->state == RUNNABLE) {
-        // Incrementar la prioridad del proceso según su boost
-        p->priority += p->boost;
-
-        // Si la prioridad alcanza 9, cambiar el boost a -1
-        if(p->priority >= 9) {
-          p->priority = 9;   // Mantener la prioridad en 9 como máximo
-          p->boost = -1;     // Cambiar el boost a -1
-        }
-
-        // Si la prioridad llega a 0, cambiar el boost a 1
-        if(p->priority <= 0) {
-          p->priority = 0;   // Mantener la prioridad en 0 como mínimo
-          p->boost = 1;      // Cambiar el boost a 1
-        }
-
-        // Ejecutar el proceso
+        // Switch to chosen process.  It is the process's job
+        // to release its lock and then reacquire it
+        // before jumping back to us.
         p->state = RUNNING;
         c->proc = p;
         swtch(&c->context, &p->context);
 
-        // El proceso ha terminado de ejecutarse por ahora
+        // Process is done running for now.
+        // It should have changed its p->state before coming back.
         c->proc = 0;
         found = 1;
       }
       release(&p->lock);
     }
-    
     if(found == 0) {
-      // No hay nada que ejecutar; detener este core hasta una interrupción.
+      // nothing to run; stop running on this core until an interrupt.
       intr_on();
       asm volatile("wfi");
     }
@@ -710,4 +713,36 @@ procdump(void)
     printf("%d %s %s", p->pid, state, p->name);
     printf("\n");
   }
+}
+
+struct ptable_struct ptable;
+
+// Establece la prioridad de un proceso dado su PID.
+int set_priority(int pid, int priority) {
+    struct proc *p;
+    acquire(&ptable.lock); // Adquiere el lock de la tabla de procesos.
+    for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
+        if(p->pid == pid) {
+            p->priority = priority; // Asigna la nueva prioridad.
+            release(&ptable.lock); // Libera el lock.
+            return 0;  // Éxito
+        }
+    }
+    release(&ptable.lock); // Libera el lock si no se encontró el PID.
+    return -1;  // PID no encontrado
+}
+
+// Establece el boost de un proceso dado su PID.
+int set_boost(int pid, int boost) {
+    struct proc *p;
+    acquire(&ptable.lock); // Adquiere el lock de la tabla de procesos.
+    for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
+        if(p->pid == pid) {
+            p->boost = boost; // Asigna el nuevo boost.
+            release(&ptable.lock); // Libera el lock.
+            return 0;  // Éxito
+        }
+    }
+    release(&ptable.lock); // Libera el lock si no se encontró el PID.
+    return -1;  // PID no encontrado
 }
