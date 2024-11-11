@@ -5,6 +5,7 @@
 #include "memlayout.h"
 #include "spinlock.h"
 #include "proc.h"
+#include "syscall.h"
 
 uint64
 sys_exit(void)
@@ -90,4 +91,23 @@ sys_uptime(void)
   xticks = ticks;
   release(&tickslock);
   return xticks;
+}
+
+//Declarar las nuevas funciones como externas
+extern int mprotect(void *addr, int len);
+extern int munprotect(void *addr, int len);
+
+uint64 sys_mprotect(void) {
+    uint64 addr;
+    int len;
+    argaddr(0, &addr);  // Obtener el argumento sin esperar retorno
+    argint(1, &len);    // Obtener el segundo argumento sin esperar retorno
+    return mprotect((void*)addr, len);
+}
+uint64 sys_munprotect(void) {
+    uint64 addr;
+    int len;
+    argaddr(0, &addr);  // Obtener el argumento sin esperar retorno
+    argint(1, &len);    // Obtener el segundo argumento sin esperar retorno
+    return munprotect((void*)addr, len);
 }

@@ -5,6 +5,8 @@
 #include "riscv.h"
 #include "defs.h"
 #include "fs.h"
+#include "spinlock.h"
+#include "proc.h"
 
 /*
  * the kernel's page table.
@@ -448,4 +450,40 @@ copyinstr(pagetable_t pagetable, char *dst, uint64 srcva, uint64 max)
   } else {
     return -1;
   }
+}
+
+int mprotect(void *addr, int len) {
+    char *a = (char *)addr;
+    pagetable_t pagetable = myproc()->pagetable;
+    pte_t *pte;
+
+    for (char *end = a + len * PGSIZE; a < end; a += PGSIZE) {
+        pte = walk(pagetable, (uint64)a, 0);
+        if (!pte) {
+            return -1;  // Error si la página no se encuentra
+        }
+
+        // Quitar permiso de escritura (desactivar PTE_W)
+        *pte &= ~PTE_W;
+    }
+
+    return 0;  // Éxito
+}
+
+int munprotect(void *addr, int len) {
+    char *a = (char *)addr;
+    pagetable_t pagetable = myproc()->pagetable;
+    pte_t *pte;
+
+    for (char *end = a + len * PGSIZE; a < end; a += PGSIZE) {
+        pte = walk(pagetable, (uint64)a, 0);
+        if (!pte) {
+            return -1;  // Error si la página no se encuentra
+        }
+
+        // Permitir escritura (activar PTE_W)
+        *pte |= PTE_W;
+    }
+
+    return 0;  // Éxito
 }
