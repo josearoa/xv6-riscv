@@ -335,6 +335,18 @@ sys_open(void)
     }
   }
 
+  //Permisos
+  
+  if((omode & O_WRONLY) && !(ip->permissions & 2)){
+    iunlockput(ip);
+    return -1;
+  }
+  
+  if((omode & O_RDONLY) && !(ip->permissions & 1)){
+    iunlockput(ip);
+    return -1;
+  }
+
   if(ip->type == T_DEVICE && (ip->major < 0 || ip->major >= NDEV)){
     iunlockput(ip);
     end_op();

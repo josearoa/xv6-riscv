@@ -106,6 +106,10 @@ filestat(struct file *f, uint64 addr)
 int
 fileread(struct file *f, uint64 addr, int n)
 {
+  if (!(f->ip->permissions & 1)){
+    return -1;
+  }
+  
   int r = 0;
 
   if(f->readable == 0)
@@ -134,6 +138,10 @@ fileread(struct file *f, uint64 addr, int n)
 int
 filewrite(struct file *f, uint64 addr, int n)
 {
+  if(!(f->ip->permissions & 2)){
+    return -1;
+  }
+  
   int r, ret = 0;
 
   if(f->writable == 0)

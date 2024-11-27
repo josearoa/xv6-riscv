@@ -5,6 +5,7 @@
 #include "memlayout.h"
 #include "spinlock.h"
 #include "proc.h"
+#include "fs.h"
 
 uint64
 sys_exit(void)
@@ -90,4 +91,27 @@ sys_uptime(void)
   xticks = ticks;
   release(&tickslock);
   return xticks;
+}
+
+uint64
+sys_chmod(void){
+  char path[MAXPATH];
+  int mode;
+  struct inode *ip;
+
+  if(argstr(0, path, MAXPATH) < 0 || fetchint(1, &mode) < 0){
+    return -1;
+  }
+  
+  ip = namei(path);
+  if(ip==0){
+    return -1;
+  }
+
+  ilock(ip);
+  
+  ip->permissions = mode;
+
+  iunlock(ip);
+  return 0;
 }
