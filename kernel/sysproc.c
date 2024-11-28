@@ -4,7 +4,9 @@
 #include "param.h"
 #include "memlayout.h"
 #include "spinlock.h"
+#include "sleeplock.h"
 #include "proc.h"
+#include "file.h"
 #include "fs.h"
 
 uint64
@@ -94,24 +96,36 @@ sys_uptime(void)
 }
 
 uint64
-sys_chmod(void){
-  char path[MAXPATH];
-  int mode;
-  struct inode *ip;
+sys_chmod(void) {
+    char path[MAXPATH];
+    int mode;
+    struct inode *ip;
 
-  if(argstr(0, path, MAXPATH) < 0 || fetchint(1, &mode) < 0){
-    return -1;
-  }
-  
-  ip = namei(path);
-  if(ip==0){
-    return -1;
-  }
+    if (argstr(0, path, MAXPATH) < 0)
+        return -1;
+    
+    argint(1, &mode);
 
-  ilock(ip);
-  
-  ip->permissions = mode;
+    if (mode < 0 || mode > 5)
+        return -1;
 
-  iunlock(ip);
-  return 0;
+    begin_op();
+    if ((ip = namei(path)) == 0) {
+        end_op();
+        return -1; // Archivo no encontrado
+    }
+    ilock(ip);
+
+    // Verifica si es inmutable
+    if (ip->permissions == 5) {
+        iunlockput(ip);
+        end_op();
+        return -1; // No se puede cambiar el permiso
+    }
+
+    ip->permissions = mode;
+    iupdate(ip);
+    iunlockput(ip);
+    end_op();
+    return 0;
 }
